@@ -1,0 +1,21 @@
+LOGIN = "tcharpen"
+
+Vagrant.configure("2") do |config|
+
+    config.vm.box = "generic/debian12"
+    config.vm.box_url = "https://vagrantcloud.com/api/v2/vagrant/generic/debian12"
+
+    config.vm.synced_folder "./confs", "/vagrant_shared"
+
+    config.vm.provider :virtualbox do |vb|
+        vb.cpus = 2
+        vb.memory = 2048
+    end
+
+    config.vm.define "#{LOGIN}S" do |server|
+        server.vm.hostname = "#{LOGIN}S"
+        server.vm.network "private_network", ip: "192.168.56.110"
+        server.vm.provision "shell", path: "scripts/server.sh"
+    end
+
+end

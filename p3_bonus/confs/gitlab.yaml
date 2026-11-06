@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gitlab
+  namespace: gitlab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gitlab
+  template:
+    metadata:
+      labels:
+        app: gitlab
+    spec:
+      containers:
+      - name: gitlab
+        image: docker.io/gitlab/gitlab-ce:latest
+        ports:
+        - containerPort: 8181
+        env:
+        - name: GITLAB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: gitlab-root-password
+              key: password
+        - name: GITLAB_OMNIBUS_CONFIG
+          value: |
+            external_url 'http://localhost:8181'
+            puma['worker_processes'] = 0
+            sidekiq['concurrency'] = 5
+            prometheus_monitoring['enable'] = false
+        resources:
+          requests:
+            memory: "2Gi"
+        readinessProbe:
+          httpGet:
+            path: /users/sign_in
+            port: 8181
+          initialDelaySeconds: 120
+          periodSeconds: 10
+          failureThreshold: 60
+        volumeMounts:
+        - name: shm
+          mountPath: /dev/shm
+      volumes:
+      - name: shm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitlab-service
+  namespace: gitlab
+spec:
+  type: LoadBalancer
+  selector:
+    app: gitlab
+  ports:
+  - protocol: TCP
+    port: 8181
+    targetPort: 8181

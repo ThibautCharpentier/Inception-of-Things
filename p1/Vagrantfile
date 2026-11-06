@@ -1,0 +1,39 @@
+LOGIN = "tcharpen"
+
+if File.exist?('.env')
+    File.foreach('.env') do |line|
+        next if line.strip.empty? || line.start_with?('#')
+        key, value = line.strip.split('=', 2)
+        ENV[key] = value.gsub(/\A['"]|['"]\z/, '') if key && value
+    end
+end
+
+Vagrant.configure("2") do |config|
+
+    config.vm.box = "generic/debian12"
+    config.vm.box_url = "https://vagrantcloud.com/api/v2/vagrant/generic/debian12"
+
+    config.vm.provider :virtualbox do |vb|
+        vb.cpus = 1
+        vb.memory = 1024
+    end
+
+    config.vm.define "#{LOGIN}S" do |server|
+        server.vm.hostname = "#{LOGIN}S"
+        server.vm.network "private_network", ip: "192.168.56.110"
+        server.vm.provision "shell", path: "scripts/server.sh",
+            env: {
+                "K3S_TOKEN" => ENV['K3S_TOKEN']
+            }
+    end
+
+    config.vm.define "#{LOGIN}SW" do |worker|
+        worker.vm.hostname = "#{LOGIN}SW"
+        worker.vm.network "private_network", ip: "192.168.56.111"
+        worker.vm.provision "shell", path: "scripts/worker.sh",
+            env: {
+                "K3S_TOKEN" => ENV['K3S_TOKEN']
+            }
+    end
+
+end
